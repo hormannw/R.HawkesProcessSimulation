@@ -1,4 +1,3 @@
-setwd("./HawkesProcesses/paper/CodeForTimings")
 library(Runuran)
 library(microbenchmark)
 source("HawkesProcessGeneration.R")

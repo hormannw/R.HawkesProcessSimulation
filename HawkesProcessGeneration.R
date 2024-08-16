@@ -166,6 +166,8 @@ NHPP.Algo4 <- function(phi=function(x) exp(-x)*1.e3,UBnTr, a=0,b=10){
       tv[i] <- t; i<-i+1  # 9
    }
  }
+  print(paste("Warning HP.Algo5(): simulation stopped after UBnTr=",UBnTr,"trials")) 
+ return(list(events=tv[1:(i-1)],nTr=(j-1),percAcc=(i-1)/(j-1)))}
 }
 # res<- NHPP.Algo4(phi=function(x) exp(-x)*1.e4,UBnTr=11000, a=0.1,b=7)
 #hist(res$events,breaks=60,main=paste("Histogram Algo4, ",round(res$percAcc*100,2),"% were accepted"))
@@ -188,10 +190,10 @@ HP.Algo5 <- function(lam0=function(x)10, a=0,b=10, phi=function(x) exp(-x)*0.5,m
 
  BnTr=100 # number of random variates that are precalcuated; 100 should not be changed
  t<-a; lamt<-lam0(a); phi0<- phi(0); i<-1; # 1:
- tv <- NULL 
+ tv <- numeric(maxTrial)
  for(j in 1:maxTrial){ # 2:
    if(j%%BnTr==1){
-    ruv<- runif(BnTr); rexpv <- rexp(BnTr); tv <- c(tv,numeric(BnTr))# pre calculation of random variates
+    ruv<- runif(BnTr); rexpv <- rexp(BnTr);# pre calculation of random variates
    }
    t <- t + rexpv[1+j%%BnTr]/lamt          # 3:
    if(t > b){                              # 4:
@@ -203,7 +205,8 @@ HP.Algo5 <- function(lam0=function(x)10, a=0,b=10, phi=function(x) exp(-x)*0.5,m
       tv[i] <- t; i<-i+1; lamt<-lamt+phi0  # 9:
    }# 10:
  }# 11:
-  return(list(events=tv[1:(i-1)],nTr=(j)))
+ print(paste("Warning HP.Algo5(): simulation stopped after maxTrial=",maxTrial)) 
+ return(list(events=tv[1:(i-1)],nTr=(j-1),percAcc=(i-1)/(j-1)) )} # # 5:
 }# end HP.Algo5()
 # res<-HP.Algo5(lam0=function(x)ifelse(x<1,100,0), phi=function(x) exp(-x)*0.5, a=0,b=100)
 # c(length(res$events),res$nTr,res$percAcc) #[1] 199.000000 210.000000   0.947619
@@ -239,15 +242,15 @@ HP.Algo6 <- function(lam0InvCDF=function(x)x,Alam0=5,phiInvCDF=qexp,repr=0.5,T=1
    N <- rpois(length(G[[k-1]]),repr)  # 3:&4:
    if(sum(N)>0){                      # 5:
      G[[k]] <- rep(G[[k-1]],N) + phiInvCDF(runif(sum(N)))# 6:&7:&8:
+     if(T<Inf){ 
+       iv <-  ( G[[k]] < T) # 9:
+  	   nRej <- nRej + sum(!iv)
+       G[[k]] <- G[[k]][iv] # 9:
+     }
    }else{                                                # 12.1:
       if(!sortYN){return(list(events=unlist(G),nRej=nRej,kGener=k))} 
 	  return(list(events=sort(unlist(G)),nRej=nRej,kGener=k)) # 12.2
    }	  
-   if(T<Inf){ 
-     iv <-  ( G[[k]] < T) # 9:
-	 nRej <- nRej + sum(!iv)
-     G[[k]] <- G[[k]][iv] # 9:
-   }
  }
 }# end HP.Algo6()  
 #res<- HP.Algo6(lam0InvCDF=function(x)x,Alam0=80000,phiInvCDF=qexp,repr=0.2,T=Inf,sortYN=FALSE)
@@ -289,14 +292,14 @@ HP.Algo6_7 <- function(lam0InvCDF=function(x)x,Alam0=5,phiInvCDF=qexp,repr=0.5,T
      Um <- runif(N)*m    # Algo 7 2:
      IDnoM1 <- as.integer(Um)  # Algo 7 3:
      G[[k]] <- G[[k-1]][1+IDnoM1] + phiInvCDF(Um-IDnoM1) # Algo 6 6:&7:&8:   and Algo 7 4:
+     if(T<Inf){ 
+       iv <-  ( G[[k]] < T)
+	   nRej <- nRej + sum(!iv)
+       G[[k]] <- G[[k]][iv] 
+     }
    }else{
       if(!sortYN){return(list(events=unlist(G),nRej=nRej,kGener=k))}
 	  return(return(list(events=sort(unlist(G)),nRej=nRej,kGener=k)))
-   }	  
-   if(T<Inf){ 
-     iv <-  ( G[[k]] < T)
-	 nRej <- nRej + sum(!iv)
-     G[[k]] <- G[[k]][iv] 
    }
  }
 }# end HP.Algo6_7()   
@@ -387,7 +390,7 @@ NHPP.Algo8 <- function(m=1,invCDF=qexp,Aphi=2,sortYN=FALSE){
 ##########################################
 ##########################################
 ##########################################
-HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr=0.5,T=100,sortYN=FALSE){
+HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr=0.5,T=100,sortYN=FALSE,memBound=2^28){
 # simulates m independent realisations of HP on (0,T) using Algorithm 9 (cluster based method) 
 #         together with Algo 7 to generate the NHPP-subprocesses of the Hawkes process.
 # returns list:   events = event-vector, IDno = IDno vector,
@@ -408,9 +411,8 @@ HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr
 # repr=0.5 ... reproduction number n* = expected number of offsprings
 # T ... Inf or finite ... upper bound for the simulation
 # sortYN ... use TRUE if a sorted output is required
-
-memBound=2^28 # to stop a simulation that requires too much memory
-              # necessary esepcially for experiments with repr very close or equal or larger than 1  !!!!!
+# memBound=2^28 ... used to stop a simulation that would return an object larger than memBound 
+#                   necessary esepcially for experiments with repr very close or equal or larger than 1  !!!!!
 
  nRej <- 0
  G <- ID <- list()
@@ -425,39 +427,34 @@ memBound=2^28 # to stop a simulation that requires too much memory
    G[[1]] <- rep(immigrant,m)
    ID[[1]] <- rep(1:m,each=length(immigrant))
  }
-#print(rbind(round(G[[1]],3),ID[[1]]))
+ total_length <- length(ID[[1]])
  for(k in 2:100000){                                                    # 2:
-#print(paste("k=",k))
    lkm1 <- length(G[[k-1]])
-#print(lkm1)
-#print(sortYN) 
    offspr <- NHPP.Algo8(m=lkm1,invCDF=phiInvCDF,Aphi=repr,sortYN=FALSE) # 3
-#print(rbind(round(offspr$events,3),offspr$IDno))
    N <- length(offspr$events)
+   total_length <- total_length + N    
    if(N>0){	                                              # 4: condition negated
-    if(sum(N)*8+object.size(G)>memBound) {
-	    print("total memor size required larger than memBound = 250 MB")
-	    print("error in rHawkes; object too large; reduce repr,T or n!!")
-        return(NULL)
-   	 }	
-
+     if(total_length*12 >memBound) { # as G[[]] (double with 8 byte) and ID[[]] (integer 4 byte)   
+	    print(paste("HP.Algo9(): WARNING: total memory size for output object larger than memBound =",memBound/2^20,"MB"))
+	    print("returns the unsorted observations generated so far")
+		return(list(events=unlist(G),IDno=unlist(ID),nRej=nRej,kGener=k-1))
+	 }	
      ID[[k]] <- ID[[k-1]][offspr$IDno]                 # 7
      G[[k]] <- G[[k-1]][offspr$IDno] + offspr$events   # 8
-#print(rbind(round(G[[k]],3),ID[[k]]))
+     if(T<Inf){ 
+       iv <-  ( G[[k]] < T)    # 9:
+	   nRej <- nRej + sum(!iv) # 9:
+       G[[k]] <- G[[k]][iv]    # 9:
+       ID[[k]] <- ID[[k]][iv]  # 9:
+     }
    }else{
-      if( !is.function(lam0InvCDF) & ! is.list(immigrant)){# "fixed immigrants" not included in the final list
-	      G <- G[-1]; ID<-ID[-1] }
-      if(!sortYN){return(list(events=unlist(G),IDno=unlist(ID),nRej=nRej,kGener=k-1))} # 5
-	  G <- unlist(G); ID <- unlist(ID)
-	  oIDev<-order(ID,G)
-      return(list(events=G[oIDev],IDno=ID[oIDev],nRej=nRej,kGener=k-1))	  
+     if( !is.function(lam0InvCDF) & ! is.list(immigrant)){# "fixed immigrants" not included in the final list
+	     G <- G[-1]; ID<-ID[-1] }
+     if(!sortYN){return(list(events=unlist(G),IDno=unlist(ID),nRej=nRej,kGener=k-1))} # 5
+	 G <- unlist(G); ID <- unlist(ID)
+	 oIDev<-order(ID,G)
+     return(list(events=G[oIDev],IDno=ID[oIDev],nRej=nRej,kGener=k-1))	  
    }                         # 10:	  
-   if(T<Inf){ 
-     iv <-  ( G[[k]] < T)    # 9:
-	 nRej <- nRej + sum(!iv) # 9:
-     G[[k]] <- G[[k]][iv]    # 9:
-     ID[[k]] <- ID[[k]][iv]  # 9:
-   }
  }       # 11:
 }# end HP.Algo9()     
 
@@ -486,6 +483,26 @@ memBound=2^28 # to stop a simulation that requires too much memory
 # res <- HP.Algo9(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE) } )
 #   min     lq     mean  median     uq    max neval
 # 5.602 5.8801 6.067201 5.98705 6.1096 7.2466   100
+
+#example: checking memorybound
+#set.seed(123)
+#res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.99,T=Inf,sortYN=F,memBound=2.e7)
+#[1] "HP.Algo9(): WARNING: total memory size for output object larger than memBound = 19.073486328125 MB"
+#[1] "returns the unsorted observations generated so far"
+#c(size=length(res$events)*12,kGener=res$kGener)
+#    size   kGener 
+#19682640       40 
+#hist(res$events,breaks=100)
+######## 
+#set.seed(123)
+#res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.99,T=Inf,sortYN=F,memBound=4.e7)
+#[1] "HP.Algo9(): WARNING: total memory size for output object larger than memBound = 38.14697265625 MB"
+#[1] "returns the unsorted observations generated so far"
+#c(size=length(res$events)*12,kGener=res$kGener)
+#    size   kGener 
+#39882840      108 
+#windows();hist(res$events,breaks=100)
+
 
 
 
@@ -541,6 +558,11 @@ memBound=2^28
    	 }	
      G[[k]] <- rep(G[[k-1]],N) + phiInvCDF(runif(sum(N)))# 6:&7:&8:
      ID[[k]]  <- rep(ID[[k-1]], times=N)    
+     if(T<Inf){ 
+       iv <-  ( G[[k]] < T) # 9:
+	   nRej <- nRej + sum(!iv)
+       G[[k]] <- G[[k]][iv] # 9:
+     }
    }else{ 
      if(!is.list(immigrant)){G <- G[-1]; ID<-ID[-1] }# fixed immgrants are not returned in the final list
      if(!sortYN){return(list(events=unlist(G),IDno=unlist(ID),nRej=nRej,kGener=k-1))}
@@ -548,11 +570,6 @@ memBound=2^28
  	 oIDev<-order(ID,G)
      return(list(events=G[oIDev],IDno=ID[oIDev],nRej=nRej,kGener=k-1))	  
    }                         # 10:	  
-   if(T<Inf){ 
-     iv <-  ( G[[k]] < T) # 9:
-	 nRej <- nRej + sum(!iv)
-     G[[k]] <- G[[k]][iv] # 9:
-   }
  }
 }# end of markHPcluster()
 

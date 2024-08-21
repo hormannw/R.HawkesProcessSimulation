@@ -167,7 +167,7 @@ NHPP.Algo4 <- function(phi=function(x) exp(-x)*1.e3,UBnTr, a=0,b=10){
    }
  }
   print(paste("Warning HP.Algo5(): simulation stopped after UBnTr=",UBnTr,"trials")) 
- return(list(events=tv[1:(i-1)],nTr=(j-1),percAcc=(i-1)/(j-1)))}
+ return(list(events=tv[1:(i-1)],nTr=(j-1),percAcc=(i-1)/(j-1)))
 }
 # res<- NHPP.Algo4(phi=function(x) exp(-x)*1.e4,UBnTr=11000, a=0.1,b=7)
 #hist(res$events,breaks=60,main=paste("Histogram Algo4, ",round(res$percAcc*100,2),"% were accepted"))
@@ -206,7 +206,7 @@ HP.Algo5 <- function(lam0=function(x)10, a=0,b=10, phi=function(x) exp(-x)*0.5,m
    }# 10:
  }# 11:
  print(paste("Warning HP.Algo5(): simulation stopped after maxTrial=",maxTrial)) 
- return(list(events=tv[1:(i-1)],nTr=(j-1),percAcc=(i-1)/(j-1)) )} # # 5:
+ return(list(events=tv[1:(i-1)],nTr=(j-1),percAcc=(i-1)/(j-1)) ) # # 5:
 }# end HP.Algo5()
 # res<-HP.Algo5(lam0=function(x)ifelse(x<1,100,0), phi=function(x) exp(-x)*0.5, a=0,b=100)
 # c(length(res$events),res$nTr,res$percAcc) #[1] 199.000000 210.000000   0.947619
@@ -367,7 +367,7 @@ PP.Algo7 <- function(m,T=1,lam=1,sortYN=FALSE){
 #hist(F,breaks=60)
 
 ##############################################################
-NHPP.Algo8 <- function(m=1,invCDF=qexp,Aphi=2,sortYN=FALSE){
+NHPP.Algo3_7 <- function(m=1,invCDF=qexp,Aphi=2,sortYN=FALSE){
 # simuates m independent repetitons of NHPP using paper Algo 3 "NHPP Inversion" 
 # and Algo 7 to generate the Poisson processes. 
 # returns a list holding events = event-vector, IDno = vector of the ID numbers
@@ -379,10 +379,10 @@ NHPP.Algo8 <- function(m=1,invCDF=qexp,Aphi=2,sortYN=FALSE){
  PP <- PP.Algo7(lam=Aphi,m=m,sortYN=sortYN) # 1
  PP$events <- invCDF(PP$events)             # 2.1
  return(PP)                                 # 2.2
-}# end PP.Algo8()   
-#res<- NHPP.Algo8(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE)
+}# end PP.Algo3_7()   
+#res<- NHPP.Algo3_7(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE)
 #hist(res$events,breaks=100)
-#microbenchmark(res<- NHPP.Algo8(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE))
+#microbenchmark(res<- NHPP.Algo3_7(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE))
 #   min      lq     mean  median      uq   max neval
 # 5.064 5.17975 5.636845 5.24385 6.11545 8.033   100
 
@@ -390,7 +390,7 @@ NHPP.Algo8 <- function(m=1,invCDF=qexp,Aphi=2,sortYN=FALSE){
 ##########################################
 ##########################################
 ##########################################
-HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr=0.5,T=100,sortYN=FALSE,memBound=2^28){
+HP.Algo8 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr=0.5,T=100,sortYN=FALSE,memBound=2^28){
 # simulates m independent realisations of HP on (0,T) using Algorithm 9 (cluster based method) 
 #         together with Algo 7 to generate the NHPP-subprocesses of the Hawkes process.
 # returns list:   events = event-vector, IDno = IDno vector,
@@ -417,7 +417,7 @@ HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr
  nRej <- 0
  G <- ID <- list()
  if(is.function(lam0InvCDF)){
-   immigrant <- NHPP.Algo8(m=m,invCDF=lam0InvCDF,Aphi=Alam0,sortYN=FALSE) # 1:
+   immigrant <- NHPP.Algo3_7(m=m,invCDF=lam0InvCDF,Aphi=Alam0,sortYN=FALSE) # 1:
    G[[1]] <- immigrant$events
    ID[[1]] <- immigrant$IDno
  }else if(is.list(immigrant)){
@@ -430,12 +430,12 @@ HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr
  total_length <- length(ID[[1]])
  for(k in 2:100000){                                                    # 2:
    lkm1 <- length(G[[k-1]])
-   offspr <- NHPP.Algo8(m=lkm1,invCDF=phiInvCDF,Aphi=repr,sortYN=FALSE) # 3
+   offspr <- NHPP.Algo3_7(m=lkm1,invCDF=phiInvCDF,Aphi=repr,sortYN=FALSE) # 3
    N <- length(offspr$events)
    total_length <- total_length + N    
    if(N>0){	                                              # 4: condition negated
      if(total_length*12 >memBound) { # as G[[]] (double with 8 byte) and ID[[]] (integer 4 byte)   
-	    print(paste("HP.Algo9(): WARNING: total memory size for output object larger than memBound =",memBound/2^20,"MB"))
+	    print(paste("HP.Algo8(): WARNING: total memory size for output object larger than memBound =",memBound/2^20,"MB"))
 	    print("returns the unsorted observations generated so far")
 		return(list(events=unlist(G),IDno=unlist(ID),nRej=nRej,kGener=k-1))
 	 }	
@@ -456,18 +456,18 @@ HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr
      return(list(events=G[oIDev],IDno=ID[oIDev],nRej=nRej,kGener=k-1))	  
    }                         # 10:	  
  }       # 11:
-}# end HP.Algo9()     
+}# end HP.Algo8()     
 
 # example for immigrants simulated as NHPP uing "lam0InvCDF" and "Alam0"
-#res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=F)
+#res <- HP.Algo8(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=F)
 #hist(res$events,breaks=100)
 #length(res$events)#[1] 99312
-#microbenchmark(res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=F))
+#microbenchmark(res <- HP.Algo8(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=F))
 #    min     lq     mean median     uq    max neval
 # 4.9244 5.2123 5.387533 5.3261 5.4118 7.4739   100
 
 # example: simulate a "Cluster" a HP with a single immigrant at 0 (it is not stored in the result!!) 
-# res <- HP.Algo9(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=0,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
+# res <- HP.Algo8(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=0,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
 # hist(res$events,breaks=100)
 # length(res$events)#[1] 100155 
 # max(res$events) #[1] 23.96439
@@ -476,18 +476,18 @@ HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr
 # example: Simulate HP with Renewal-Process immigrants (called Renewal Hawkes Process)
 # first we generate the immigrants
 # res.immi <- rRenewalProc(m=1.e4,T=10.5,phiInvCDF=function(u) 0.9+0.2*u,sortYN=TRUE)# inter event times are U(0.9,1.1)
-# res <- HP.Algo9(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
+# res <- HP.Algo8(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
 # c(length(res$events),min(res$events))#[1] 1.990700e+05 9.000066e-01
 # hist(res$events,breaks=200,main="Renewal Hawkes Process")
 # microbenchmark( { res.immi <- rRenewalProc(m=5.e3,T=10.5,phiInvCDF=function(u) 0.9+0.2*u,sortYN=TRUE)# inter event times are U(0.9,1.1);
-# res <- HP.Algo9(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE) } )
+# res <- HP.Algo8(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE) } )
 #   min     lq     mean  median     uq    max neval
 # 5.602 5.8801 6.067201 5.98705 6.1096 7.2466   100
 
 #example: checking memorybound
 #set.seed(123)
-#res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.99,T=Inf,sortYN=F,memBound=2.e7)
-#[1] "HP.Algo9(): WARNING: total memory size for output object larger than memBound = 19.073486328125 MB"
+#res <- HP.Algo8(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.99,T=Inf,sortYN=F,memBound=2.e7)
+#[1] "HP.Algo8(): WARNING: total memory size for output object larger than memBound = 19.073486328125 MB"
 #[1] "returns the unsorted observations generated so far"
 #c(size=length(res$events)*12,kGener=res$kGener)
 #    size   kGener 
@@ -495,8 +495,8 @@ HP.Algo9 <- function(m=1,lam0InvCDF=NULL,Alam0=5,immigrant=0,phiInvCDF=qexp,repr
 #hist(res$events,breaks=100)
 ######## 
 #set.seed(123)
-#res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.99,T=Inf,sortYN=F,memBound=4.e7)
-#[1] "HP.Algo9(): WARNING: total memory size for output object larger than memBound = 38.14697265625 MB"
+#res <- HP.Algo8(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.99,T=Inf,sortYN=F,memBound=4.e7)
+#[1] "HP.Algo8(): WARNING: total memory size for output object larger than memBound = 38.14697265625 MB"
 #[1] "returns the unsorted observations generated so far"
 #c(size=length(res$events)*12,kGener=res$kGener)
 #    size   kGener 

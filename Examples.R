@@ -73,28 +73,28 @@ resInd<-getIndices(res)
 F <-res$events[resInd$endInd] # final event of all simulated non-empty realisations
 hist(F,breaks=60)
 
-res<- NHPP.Algo8(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE)
+res<- NHPP.Algo3_7(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE)
 hist(res$events,breaks=100)
-microbenchmark(res<- NHPP.Algo8(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE))
+microbenchmark(res<- NHPP.Algo3_7(m=2.5e4,invCDF=qexp,Aphi=4,sortYN=FALSE))
 
 
-res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
+res <- HP.Algo8(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
 hist(res$events,breaks=100)
 length(res$events)#[1] 99312
-microbenchmark(res <- HP.Algo9(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE))
+microbenchmark(res <- HP.Algo8(m=1000,lam0InvCDF=function(x)10*x,Alam0=50,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE))
 
- res <- HP.Algo9(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=0,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
+ res <- HP.Algo8(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=0,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
  hist(res$events,breaks=100)
  length(res$events)#[1] 100155 
  max(res$events) #[1] 23.96439
 min(res$events) #[1] [1] 1.549722e-06  # shows that the 0 immigrants are not returned
 
 res.immi <- rRenewalProc(m=1.e4,T=10.5,phiInvCDF=function(u) 0.9+0.2*u,sortYN=TRUE)#inter event times are U(0.9,1.1)
-res <- HP.Algo9(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
+res <- HP.Algo8(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE)
 c(length(res$events),min(res$events))#[1] 1.990700e+05 9.000066e-01
 hist(res$events,breaks=200,main="Renewal Hawkes Process")
 microbenchmark( { res.immi <- rRenewalProc(m=5.e3,T=10.5,phiInvCDF=function(u) 0.9+0.2*u,sortYN=TRUE)# inter event times are U(0.9,1.1);
-res <- HP.Algo9(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE) } )
+res <- HP.Algo8(m=1.e5,lam0InvCDF=NULL,Alam0=0,immigrant=res.immi,phiInvCDF=qexp,repr=0.5,T=Inf,sortYN=FALSE) } )
 
 
 res <- markHPcluster(m=1.e5,T=Inf,immigrant=c(0),phiInvCDF=qexp,repr=0.5,markInvCDF=function(u) qgamma(u,shape=4,rate=4))
